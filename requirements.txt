@@ -1,0 +1,5 @@
+groq>=1.7.0
+pydantic>=2.10
+python-dotenv>=1.0
+pillow>=10.0
+pytest>=8.0
