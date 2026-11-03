@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invoice Extractor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #12231d;
+      --muted: #5d7269;
+      --paper: #eef3f0;
+      --panel: #f7faf8;
+      --line: #c3d0c9;
+      --accent: #1c6b52;
+      --accent-ink: #0c3d2d;
+      --err: #8f2d2d;
+      --ok: #1c6b52;
+      --warn: #8a5a12;
+      --shadow: 0 18px 40px rgba(18, 35, 29, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: Manrope, sans-serif;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.35), transparent 28%),
+        repeating-linear-gradient(
+          90deg,
+          transparent 0,
+          transparent 47px,
+          rgba(20, 32, 28, 0.03) 47px,
+          rgba(20, 32, 28, 0.03) 48px
+        ),
+        radial-gradient(ellipse 70% 45% at 15% 0%, #d4e8df 0%, transparent 55%),
+        radial-gradient(ellipse 55% 40% at 95% 10%, #d9e3ec 0%, transparent 50%),
+        var(--paper);
+    }
+
+    main {
+      width: min(720px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 4.5rem 0 5rem;
+      animation: rise 0.7s ease both;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .brand {
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(2.4rem, 7vw, 3.6rem);
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      margin: 0 0 0.85rem;
+    }
+
+    .lede {
+      margin: 0 0 2.25rem;
+      max-width: 28rem;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .dropzone {
+      position: relative;
+      display: grid;
+      gap: 1rem;
+      justify-items: start;
+      padding: 1.6rem 1.5rem 1.5rem;
+      border: 1.5px dashed var(--line);
+      border-radius: 1rem;
+      background: color-mix(in srgb, var(--panel) 88%, white);
+      box-shadow: var(--shadow);
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+      cursor: pointer;
+    }
+
+    .dropzone:hover,
+    .dropzone:focus-within {
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+      transform: translateY(-1px);
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      border-style: solid;
+      background: #e8f3ee;
+    }
+
+    .dropzone.busy {
+      pointer-events: none;
+      opacity: 0.82;
+    }
+
+    .drop-label {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .drop-title {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 1.35rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+
+    .drop-hint {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .file-chip {
+      display: none;
+      max-width: 100%;
+      padding: 0.45rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 0.45rem;
+      background: #fff;
+      color: var(--accent-ink);
+      font-size: 0.9rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-chip.show { display: inline-block; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      align-items: center;
+      width: 100%;
+    }
+
+    input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 0.55rem;
+      padding: 0.78rem 1.2rem;
+      font: inherit;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+    }
+
+    #submit {
+      position: relative;
+      z-index: 1;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    #submit:hover:not(:disabled) { background: var(--accent-ink); }
+    #submit:active:not(:disabled) { transform: translateY(1px); }
+    #submit:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    #copy {
+      display: none;
+      position: relative;
+      z-index: 1;
+      background: transparent;
+      color: var(--accent-ink);
+      border: 1px solid var(--line);
+    }
+
+    #copy.show { display: inline-flex; }
+    #copy:hover { background: #fff; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 1rem;
+      align-items: center;
+      min-height: 1.5rem;
+      margin: 1.35rem 0 0.85rem;
+    }
+
+    #status {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    #status.working { animation: pulse 1.1s ease infinite; }
+    #status.error { color: var(--err); }
+
+    .badge {
+      display: none;
+      padding: 0.2rem 0.55rem;
+      border-radius: 0.35rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge.show { display: inline-flex; }
+    .badge.ok { background: #d9eee4; color: var(--ok); }
+    .badge.warnings { background: #f3e5c8; color: var(--warn); }
+    .badge.errors { background: #f0d6d6; color: var(--err); }
+
+    .result-wrap {
+      display: none;
+      animation: reveal 0.45s ease both;
+    }
+
+    .result-wrap.show { display: block; }
+
+    pre {
+      margin: 0;
+      padding: 1.1rem 1.15rem;
+      max-height: min(55vh, 32rem);
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      background: #161d1a;
+      color: #e7eee9;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 560px) {
+      main { padding-top: 2.75rem; }
+      .dropzone { padding: 1.25rem; }
+      .actions { width: 100%; }
+      #submit, #copy { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 class="brand">Invoice Extractor</h1>
+    <p class="lede">Drop an invoice image. Get clean, validated JSON — totals checked, mismatches flagged.</p>
+
+    <form id="form" class="dropzone" tabindex="0">
+      <div class="drop-label">
+        <div class="drop-title">Upload invoice</div>
+        <div class="drop-hint">JPEG, PNG or WebP · click or drag a file here</div>
+      </div>
+      <span id="filename" class="file-chip"></span>
+      <div class="actions">
+        <button type="submit" id="submit">Extract JSON</button>
+        <button type="button" id="copy">Copy JSON</button>
+      </div>
+      <input id="file" type="file" name="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" required />
+    </form>
+
+    <div class="meta">
+      <p id="status" aria-live="polite"></p>
+      <span id="badge" class="badge"></span>
+    </div>
+
+    <div id="resultWrap" class="result-wrap">
+      <pre id="result"></pre>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById("form");
+    const fileInput = document.getElementById("file");
+    const submit = document.getElementById("submit");
+    const copyBtn = document.getElementById("copy");
+    const status = document.getElementById("status");
+    const badge = document.getElementById("badge");
+    const result = document.getElementById("result");
+    const resultWrap = document.getElementById("resultWrap");
+    const filename = document.getElementById("filename");
+
+    let lastJson = "";
+
+    function setFile(file) {
+      if (!file) return;
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      fileInput.files = transfer.files;
+      filename.textContent = file.name;
+      filename.classList.add("show");
+      status.textContent = "Ready to extract.";
+      status.className = "";
+    }
+
+    function clearResult() {
+      lastJson = "";
+      result.textContent = "";
+      resultWrap.classList.remove("show");
+      copyBtn.classList.remove("show");
+      badge.className = "badge";
+      badge.textContent = "";
+    }
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      form.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        form.classList.add("dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      form.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        form.classList.remove("dragover");
+      });
+    });
+
+    form.addEventListener("drop", (event) => {
+      const file = event.dataTransfer.files[0];
+      if (file) setFile(file);
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      if (!lastJson) return;
+      try {
+        await navigator.clipboard.writeText(lastJson);
+        copyBtn.textContent = "Copied";
+        setTimeout(() => { copyBtn.textContent = "Copy JSON"; }, 1200);
+      } catch {
+        status.textContent = "Could not copy to clipboard.";
+        status.className = "error";
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const file = fileInput.files[0];
+      if (!file) {
+        status.textContent = "Choose an image first.";
+        status.className = "error";
+        return;
+      }
+
+      const body = new FormData();
+      body.append("file", file);
+
+      submit.disabled = true;
+      form.classList.add("busy");
+      status.className = "working";
+      status.textContent = "Reading invoice…";
+      clearResult();
+
+      try {
+        const response = await fetch("/extract", { method: "POST", body });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(typeof data.detail === "string" ? data.detail : response.statusText);
+        }
+
+        lastJson = JSON.stringify(data, null, 2);
+        result.textContent = lastJson;
+        resultWrap.classList.add("show");
+        copyBtn.classList.add("show");
+
+        const state = String(data.status || "ok");
+        badge.textContent = state;
+        badge.className = "badge show " + state;
+        status.className = "";
+        status.textContent =
+          state === "ok"
+            ? "Extraction complete."
+            : state === "warnings"
+              ? "Extraction complete, with warnings to review."
+              : "Extraction complete, with errors to review.";
+      } catch (err) {
+        status.className = "error";
+        status.textContent = err.message || String(err);
+      } finally {
+        submit.disabled = false;
+        form.classList.remove("busy");
+      }
+    });
+  </script>
+</body>
+</html>
