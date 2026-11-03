@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "invoice-extractor",
+  "main": "app.py",
+  // Set this to today's date
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": ["python_workers", "python_dedicated_snapshot"],
+  "assets": {
+    "directory": "./static",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "secrets": {
+    "required": ["GROQ_API_KEY"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}
