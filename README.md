@@ -1,6 +1,6 @@
 # AI Invoice Extractor
 
-A small command-line tool that sends an invoice image **directly** to Groq's vision model, gets structured JSON back, validates it with Pydantic, and independently recalculates every amount with `Decimal` so that misreads and arithmetic errors are caught.
+A small command-line tool (and optional local web UI) that sends an invoice image **directly** to Groq's vision model, gets structured JSON back, validates it with Pydantic, and independently recalculates every amount with `Decimal` so that misreads and arithmetic errors are caught.
 
 ```
 invoice image ──► Groq vision model ──► JSON ──► Pydantic validation ──► Decimal recalculation ──► output/invoice.json
@@ -45,6 +45,40 @@ python main.py input/invoice.png
 - A human-readable report (status, errors, warnings) is printed to **stderr**.
 
 Exit codes: `0` extracted and consistent (warnings allowed), `1` could not extract (bad image, API error, malformed reply, missing key), `2` extracted but the validation found errors that need a human look. A failed run (`1`) never overwrites an existing `output/invoice.json`.
+
+### Web UI (local)
+
+```bash
+uvicorn app:app --reload
+```
+
+Visit http://127.0.0.1:8000, choose a JPEG/PNG/WebP invoice, and click **Extract**. The same validated JSON is returned by `POST /extract` (multipart field `file`).
+
+### Deploy to Cloudflare Workers
+
+Needs [Node.js](https://nodejs.org/), [uv](https://docs.astral.sh/uv/), and a Cloudflare account. Python Workers run FastAPI through Cloudflare’s ASGI bridge ([docs](https://developers.cloudflare.com/workers/languages/python/packages/fastapi/)).
+
+```bash
+# one-time: install Workers tooling into the project
+uv sync
+
+# local Workers runtime (uses .dev.vars for secrets — copy from .dev.vars.example)
+cp .dev.vars.example .dev.vars   # then set GROQ_API_KEY
+uv run pywrangler dev
+```
+
+Deploy:
+
+```bash
+uv run pywrangler deploy
+uv run pywrangler secret put GROQ_API_KEY   # paste your Groq key when prompted
+# optional:
+# uv run pywrangler secret put GROQ_MODEL
+```
+
+Wrangler prints a `*.workers.dev` URL. Open it, upload an invoice, get JSON.
+
+Config lives in [`wrangler.jsonc`](wrangler.jsonc) (`python_workers` flag, `static/` as Workers Static Assets). Do **not** put `GROQ_API_KEY` in `vars` — use secrets / `.dev.vars` only.
 
 ### Output shape
 
@@ -91,14 +125,19 @@ Tests use synthetic data and a mocked Groq client, so they need no API key and m
 ## Project layout
 
 ```
-main.py         command line, report, saving the result
-extractor.py    image checks, Groq request, API-error handling, JSON parsing
-validator.py    Pydantic validation + independent Decimal calculations + issue reporting
-models.py       Pydantic models and number/date parsing
-tests/          pytest suite (mocked AI responses)
-input/          put invoice images here
-output/         invoice.json is written here
-.env            your API key (not committed)   .env.example  template
+main.py            command line, report, saving the result
+app.py             FastAPI upload page + POST /extract (+ Workers entrypoint)
+static/            web UI (index.html); also Workers Static Assets
+wrangler.jsonc     Cloudflare Workers config
+pyproject.toml     Worker deps + pywrangler tooling
+.dev.vars.example  secrets template for `pywrangler dev`
+extractor.py       image checks, Groq request, API-error handling, JSON parsing
+validator.py       Pydantic validation + independent Decimal calculations + issue reporting
+models.py          Pydantic models and number/date parsing
+tests/             pytest suite (mocked AI responses)
+input/             put invoice images here
+output/            invoice.json is written here
+.env               your API key for CLI/uvicorn (not committed)
 ```
 
 ## Limitations
