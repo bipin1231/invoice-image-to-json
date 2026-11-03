@@ -1,9 +1,9 @@
 # AI Invoice Extractor
 
-A small command-line tool (and optional local web UI) that sends an invoice image **directly** to Groq's vision model, gets structured JSON back, validates it with Pydantic, and independently recalculates every amount with `Decimal` so that misreads and arithmetic errors are caught.
+A web app that sends an uploaded invoice image **directly** to Groq's vision model, gets structured JSON back, validates it with Pydantic, and independently recalculates every amount with `Decimal` so that misreads and arithmetic errors are caught.
 
 ```
-invoice image ──► Groq vision model ──► JSON ──► Pydantic validation ──► Decimal recalculation ──► output/invoice.json
+invoice image ──► Groq vision model ──► JSON ──► Pydantic validation ──► Decimal recalculation ──► web UI response
                                                                               └─► report: missing info, mismatches, warnings
 ```
 
@@ -36,26 +36,13 @@ The app uses **`qwen/qwen3.8-27b`**, the vision model listed on Groq's [Images a
 
 Groq currently labels this model **Preview**, which means it can be changed or retired at short notice, and Groq's vision lineup has changed several times already. If the model is renamed or removed you will get a clear "model not found" error. Fix it by setting `GROQ_MODEL` in `.env` (see the vision page above for the current name); no code change needed.
 
-## Usage
-
-Put the invoice image (JPEG, PNG or WebP) in `input/` and run:
-
-```bash
-uv run python main.py input/invoice.png
-```
-
-- JSON is printed to **stdout** and saved to `output/invoice.json` (use `-o path.json` to save elsewhere).
-- A human-readable report (status, errors, warnings) is printed to **stderr**.
-
-Exit codes: `0` extracted and consistent (warnings allowed), `1` could not extract (bad image, API error, malformed reply, missing key), `2` extracted but the validation found errors that need a human look. A failed run (`1`) never overwrites an existing `output/invoice.json`.
-
 ### Web UI (local)
 
 ```bash
 uv run uvicorn app:app --reload
 ```
 
-Visit http://127.0.0.1:8000, choose a JPEG/PNG/WebP invoice, and click **Extract**. The same validated JSON is returned by `POST /extract` (multipart field `file`).
+Visit http://127.0.0.1:8000, upload a JPEG/PNG/WebP invoice, and click **Extract**. The validated JSON is returned by `POST /extract` (multipart field `file`).
 
 ### Deploy to Cloudflare Workers
 
@@ -87,7 +74,7 @@ Config lives in [`wrangler.jsonc`](wrangler.jsonc) (`python_workers` flag, `stat
 
 ```jsonc
 {
-  "source_file": "input/invoice.png",
+  "source_file": "invoice.png",
   "ai_model": "qwen/qwen3.8-27b",
   "status": "ok",                 // "ok" | "warnings" | "errors"
   "extracted": { ... },           // exactly what the model read from the invoice
@@ -120,7 +107,6 @@ Calculations use `Decimal`, round half-up to 2 places, and treat differences of 
 ## Project layout
 
 ```
-main.py            command line, report, saving the result
 app.py             FastAPI upload page + POST /extract (+ Workers entrypoint)
 static/            web UI (index.html); also Workers Static Assets
 wrangler.jsonc     Cloudflare Workers config
@@ -129,9 +115,7 @@ pyproject.toml     Worker deps + pywrangler tooling
 extractor.py       image checks, Groq request, API-error handling, JSON parsing
 validator.py       Pydantic validation + independent Decimal calculations + issue reporting
 models.py          Pydantic models and number/date parsing
-input/             put invoice images here
-output/            invoice.json is written here
-.env               your API key for CLI/uvicorn (not committed)
+.env               your API key for the local web app (not committed)
 ```
 
 ## Limitations
