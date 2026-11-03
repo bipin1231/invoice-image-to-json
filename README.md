@@ -7,29 +7,34 @@ invoice image ──► Groq vision model ──► JSON ──► Pydantic vali
                                                                               └─► report: missing info, mismatches, warnings
 ```
 
+## Installation and setup
+
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). From the project directory:
+
+```bash
+uv sync
+```
+
+Create a Groq API key at https://console.groq.com/keys, then add it to `.env`:
+
+```bash
+cp .env.example .env
+# Edit .env and set GROQ_API_KEY to your key.
+```
+
+The `.env` file is git-ignored; never commit your API key. To start the local web UI after setup:
+
+```bash
+uv run uvicorn app:app --reload
+```
+
+Then open http://127.0.0.1:8000.
+
 ## Model
 
 The app uses **`qwen/qwen3.8-27b`**, the vision model listed on Groq's [Images and Vision](https://console.groq.com/docs/vision) page (checked 2026-11-03). It accepts text + images, supports JSON mode, and takes up to 3 images / 20 MB per request.
 
 Groq currently labels this model **Preview**, which means it can be changed or retired at short notice, and Groq's vision lineup has changed several times already. If the model is renamed or removed you will get a clear "model not found" error. Fix it by setting `GROQ_MODEL` in `.env` (see the vision page above for the current name); no code change needed.
-
-## Installation
-
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
-
-```bash
-cd invoice-extractor
-uv sync
-```
-
-Add your Groq API key (create one at https://console.groq.com/keys):
-
-```bash
-cp .env.example .env               # Windows: copy .env.example .env
-# then edit .env and set GROQ_API_KEY=...
-```
-
-The key is only ever read from the environment / `.env`. `.env` is listed in `.gitignore`.
 
 ## Usage
 
@@ -112,14 +117,6 @@ Amounts are JSON **strings** (`"100500.00"`) so no consumer can accidentally rou
 
 Calculations use `Decimal`, round half-up to 2 places, and treat differences of up to 0.01 as rounding. The model is told to copy printed values as-is and **not** to fix the arithmetic, otherwise the recalculation would have nothing to catch.
 
-## Tests
-
-```bash
-pytest
-```
-
-Tests use synthetic data and a mocked Groq client, so they need no API key and make no network calls. They cover validation and calculation, number/date parsing, invalid images, malformed or truncated JSON, every API error class, and the command-line flow.
-
 ## Project layout
 
 ```
@@ -132,7 +129,6 @@ pyproject.toml     Worker deps + pywrangler tooling
 extractor.py       image checks, Groq request, API-error handling, JSON parsing
 validator.py       Pydantic validation + independent Decimal calculations + issue reporting
 models.py          Pydantic models and number/date parsing
-tests/             pytest suite (mocked AI responses)
 input/             put invoice images here
 output/            invoice.json is written here
 .env               your API key for CLI/uvicorn (not committed)
