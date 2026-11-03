@@ -1,11 +1,3 @@
-"""Command-line entry point: extract an invoice image, validate it, save output/invoice.json.
-
-Usage:  python main.py input/invoice.png
-
-JSON goes to stdout; the human-readable report goes to stderr.
-Exit codes: 0 = OK (warnings allowed), 1 = could not extract, 2 = extracted but has errors to review.
-"""
-
 import argparse
 import sys
 from pathlib import Path

@@ -1,9 +1,3 @@
-"""Web UI: upload an invoice image and get the validated JSON back.
-
-Local:   uvicorn app:app --reload
-Workers: uv run pywrangler deploy
-"""
-
 import os
 import tempfile
 from pathlib import Path
