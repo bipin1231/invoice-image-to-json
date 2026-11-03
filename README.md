@@ -15,13 +15,11 @@ Groq currently labels this model **Preview**, which means it can be changed or r
 
 ## Installation
 
-Requires Python 3.10+.
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 cd invoice-extractor
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+uv sync
 ```
 
 Add your Groq API key (create one at https://console.groq.com/keys):
@@ -38,7 +36,7 @@ The key is only ever read from the environment / `.env`. `.env` is listed in `.g
 Put the invoice image (JPEG, PNG or WebP) in `input/` and run:
 
 ```bash
-python main.py input/invoice.png
+uv run python main.py input/invoice.png
 ```
 
 - JSON is printed to **stdout** and saved to `output/invoice.json` (use `-o path.json` to save elsewhere).
@@ -49,7 +47,7 @@ Exit codes: `0` extracted and consistent (warnings allowed), `1` could not extra
 ### Web UI (local)
 
 ```bash
-uvicorn app:app --reload
+uv run uvicorn app:app --reload
 ```
 
 Visit http://127.0.0.1:8000, choose a JPEG/PNG/WebP invoice, and click **Extract**. The same validated JSON is returned by `POST /extract` (multipart field `file`).
