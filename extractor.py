@@ -53,7 +53,7 @@ Rules:
 
 
 class ExtractionError(Exception):
-    """Base class for every failure the command line reports without a traceback."""
+    """Base class for invoice extraction failures."""
 
 
 class ConfigurationError(ExtractionError):
